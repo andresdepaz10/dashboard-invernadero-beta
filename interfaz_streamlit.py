@@ -43,11 +43,11 @@ if not df.empty:
             number = {'suffix': sufijo, 'font': {'size': 24}},
             gauge = {
                 'axis': {'range': [rango_min, rango_max], 'tickwidth': 1, 'tickcolor': "darkblue"},
-                'bar': {'color': "rgba(0,0,0,0)"}, # Ocultamos la barra sólida para usar solo el puntero
+                'bar': {'color': "rgba(0,0,0,0)"},
                 'steps': [
-                    {'range': [rango_min, opt_min], 'color': "rgba(255, 99, 71, 0.6)"},  # Peligro (Bajo) - Rojo
-                    {'range': [opt_min, opt_max], 'color': "rgba(144, 238, 144, 0.6)"}, # Óptimo - Verde
-                    {'range': [opt_max, rango_max], 'color': "rgba(255, 99, 71, 0.6)"}   # Peligro (Alto) - Rojo
+                    {'range': [rango_min, opt_min], 'color': "rgba(255, 99, 71, 0.6)"},  
+                    {'range': [opt_min, opt_max], 'color': "rgba(144, 238, 144, 0.6)"}, 
+                    {'range': [opt_max, rango_max], 'color': "rgba(255, 99, 71, 0.6)"}   
                 ],
                 'threshold': {
                     'line': {'color': "white", 'width': 6},
@@ -59,6 +59,24 @@ if not df.empty:
         fig.update_layout(margin=dict(l=15, r=15, t=40, b=15), height=200, paper_bgcolor="rgba(0,0,0,0)")
         return fig
     
+    # --- crear graficas estaticas
+    def crear_grafica_estatica(fechas, valores, color_linea):
+        fig = go.Figure(go.Scatter(
+            x=fechas, 
+            y=valores, 
+            mode='lines', 
+            line=dict(color=color_linea, width=2.5)
+        ))
+        fig.update_layout(
+            margin=dict(l=10, r=10, t=10, b=10),
+            xaxis=dict(fixedrange=True), # 🔒 Bloquea el paneo/zoom horizontal
+            yaxis=dict(fixedrange=True), # 🔒 Bloquea el paneo/zoom vertical
+            hovermode="x unified",       # Muestra el dato al pasar el ratón sin moverse
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)"
+        )
+        return fig
+
     # =========================================================
     # 1. SISTEMA DE ALERTAS VISUALES COMPLETO
     # =========================================================
@@ -67,7 +85,7 @@ if not df.empty:
     vpd_actual = ultima_medicion['vpd']
     suelo_actual = ultima_medicion['humedad_suelo1']
 
-    alertas = 0 # Contador para saber si todo está bien
+    alertas = 0 
 
     if temp_actual < 18 or temp_actual > 28:
         st.warning(f"🌡️ ALERTA TEMPERATURA: {temp_actual}°C fuera del rango óptimo (18-28°C).")
@@ -93,7 +111,7 @@ if not df.empty:
 
 
     # =========================================================
-    # 2. BARRA LATERAL (SIDEBAR) - FILTRO OPTIMIZADO (Últimos 3 días)
+    # 2. BARRA LATERAL (SIDEBAR) - FILTRO OPTIMIZADO
     # =========================================================
     st.sidebar.header("Filtros de historial")
     st.sidebar.write("Ajusta el rango de fechas. (Por defecto: últimos 3 días).")
@@ -101,10 +119,9 @@ if not df.empty:
     min_date = df.index.min().date()
     max_date = df.index.max().date()
     
-    # Calculamos la fecha de hace 3 días para que sea el valor por defecto
     default_start = max_date - datetime.timedelta(days=3)
     if default_start < min_date:
-        default_start = min_date # Evita errores si hay menos de 3 días de datos
+        default_start = min_date 
 
     fechas_seleccionadas = st.sidebar.date_input(
         "Selecciona el rango de fechas:",
@@ -156,46 +173,55 @@ if not df.empty:
             st.warning(f"Asegúrate de que la columna {e} exista en tu Google Sheet.")
     
     # =========================================================
-    # 4. TENDENCIAS HISTÓRICAS (USANDO DF_FILTRADO)
+    # 4. TENDENCIAS HISTÓRICAS (GRÁFICAS ESTÁTICAS)
     # =========================================================
     with st.container(border=True):
-        #--------------- parametros de monitoreo
         st.subheader("📈 Historial de Variables Biológicas Críticas")
+        
+        # El parámetro config={'displayModeBar': False} oculta el menú flotante de Plotly
+        config_estatica = {'displayModeBar': False}
+        
         col_graf1, col_graf2 = st.columns(2)
         with col_graf1:
             st.write("Evolución de la Temperatura Ambiente (°C)")
-            st.line_chart(df_filtrado['temperatura_ambiente'])
+            fig1 = crear_grafica_estatica(df_filtrado.index, df_filtrado['temperatura_ambiente'], "#FF7F0E") # Naranja
+            st.plotly_chart(fig1, use_container_width=True, config=config_estatica)
         with col_graf2:
             st.write("Evolución de la Humedad Ambiente (%)")
-            st.line_chart(df_filtrado['humedad_ambiente'])
+            fig2 = crear_grafica_estatica(df_filtrado.index, df_filtrado['humedad_ambiente'], "#1F77B4") # Azul
+            st.plotly_chart(fig2, use_container_width=True, config=config_estatica)
 
         col_graf3, col_graf4 = st.columns(2)
         with col_graf3:
             st.write("Evolución del VPD (kPa)")
-            st.line_chart(df_filtrado['vpd'])
+            fig3 = crear_grafica_estatica(df_filtrado.index, df_filtrado['vpd'], "#9467BD") # Morado
+            st.plotly_chart(fig3, use_container_width=True, config=config_estatica)
         with col_graf4:
             st.write("Evolución de la Humedad del Suelo (%)")
-            st.line_chart(df_filtrado['humedad_suelo1'])
+            fig4 = crear_grafica_estatica(df_filtrado.index, df_filtrado['humedad_suelo1'], "#8C564B") # Café
+            st.plotly_chart(fig4, use_container_width=True, config=config_estatica)
 
     with st.container(border=True):
-        #--------------- parametros de referencia
         st.subheader("📉 Historial de Parámetros Físicos y de Referencia")
         col_ref_graf1, col_ref_graf2 = st.columns(2)
         with col_ref_graf1:
             st.write("Intensidad Lumínica (luxes)")
-            st.line_chart(df_filtrado['luxes1'])
+            fig5 = crear_grafica_estatica(df_filtrado.index, df_filtrado['luxes1'], "#E377C2") # Rosa
+            st.plotly_chart(fig5, use_container_width=True, config=config_estatica)
         with col_ref_graf2:
             st.write("Presión Barométrica (hPa)")
-            st.line_chart(df_filtrado['presion_ambiente'])
+            fig6 = crear_grafica_estatica(df_filtrado.index, df_filtrado['presion_ambiente'], "#7F7F7F") # Gris
+            st.plotly_chart(fig6, use_container_width=True, config=config_estatica)
 
         col_ref_graf3, col_ref_graf4 = st.columns(2)
         with col_ref_graf3:
             st.write("Altitud Relativa (msnm)")
-            st.line_chart(df_filtrado['altitud'])
+            fig7 = crear_grafica_estatica(df_filtrado.index, df_filtrado['altitud'], "#BCBD22") # Verde olivo
+            st.plotly_chart(fig7, use_container_width=True, config=config_estatica)
         with col_ref_graf4:
             st.write("Temperatura Interna del Sensor BMP (°C)")
-            st.line_chart(df_filtrado['temperatura_bmp'])
-
+            fig8 = crear_grafica_estatica(df_filtrado.index, df_filtrado['temperatura_bmp'], "#17BECF") # Cian
+            st.plotly_chart(fig8, use_container_width=True, config=config_estatica)
 
     # =========================================================
     # 5. TABLA Y BOTÓN DE EXTRACCIÓN DE DATOS
@@ -204,7 +230,6 @@ if not df.empty:
         with st.expander("Ver y Descargar Registro de Datos (Tabla)"):
             st.dataframe(df_filtrado)
             
-            # Lógica para generar el archivo CSV descargable
             csv = df_filtrado.to_csv().encode('utf-8')
             st.download_button(
                 label="Descargar datos filtrados como CSV",
@@ -223,8 +248,6 @@ st.sidebar.divider()
 auto_refresh = st.sidebar.checkbox("🔄 Activar Monitoreo en Vivo (10s)")
 
 if auto_refresh:
-    # Espera 10 segundos sin hacer nada
     time.sleep(10)
-    # Limpia la caché y recarga toda la página automáticamente
     st.cache_data.clear()
     st.rerun()
