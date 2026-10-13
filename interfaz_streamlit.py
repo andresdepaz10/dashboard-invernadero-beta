@@ -315,6 +315,12 @@ else:
 st.sidebar.divider()
 auto_refresh = st.sidebar.checkbox("🔄 Activar Monitoreo en Vivo (10s)")
 if auto_refresh:
-    time.sleep(10)
-    st.cache_data.clear()
-    st.rerun()
+    # Genera la hora exacta de la interfaz
+    hora_actual = datetime.datetime.now().strftime("%H:%M:%S")
+    st.sidebar.caption(f"Última consulta al servidor: {hora_actual}")
+    
+    # Agrega un pequeño indicador circular de espera
+    with st.spinner('Esperando nuevo ciclo de telemetría...'):
+        time.sleep(10)
+        st.cache_data.clear()
+        st.rerun()
