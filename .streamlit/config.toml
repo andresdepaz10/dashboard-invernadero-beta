@@ -1,12 +1,12 @@
 [theme]
 # Verde orquídea/botánico para los botones y acentos
-primaryColor = "#2e8b57" 
+primaryColor = "#1ed760"
 
 # Fondo general oscuro y profundo
-backgroundColor = "#0e1117" 
+backgroundColor = "#0a1a12" 
 
 # Fondo secundario (para la barra lateral y tarjetas) ligeramente más claro
-secondaryBackgroundColor = "#1e2127" 
+secondaryBackgroundColor = "#132a1e" 
 
 # Texto en blanco hueso para contraste suave
 textColor = "#fafafa" 
