@@ -9,6 +9,7 @@ import datetime
 st.set_page_config(page_title="Monitoreo Invernadero", layout="wide")
 st.title("Invernadero inteligente - Panel de monitoreo")
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1E-Md23GAPTStTRUPnVyDADuJuMf7v3AcwKfDUCnLats/export?format=csv"
+
 #-------------------------------------------------------------
 @st.cache_data(ttl=10) 
 def cargar_datos():
@@ -25,6 +26,7 @@ def cargar_datos():
         return pd.DataFrame()      
 df = cargar_datos()
 #-------------------------------------------------------------
+
 if not df.empty:
     ultima_medicion = df.iloc[-1]
     
@@ -121,94 +123,96 @@ if not df.empty:
     # =========================================================
     # 3. ESTADO ACTUAL (Velocímetros y Tarjetas)
     # =========================================================
-    st.subheader("Variables Biológicas Críticas")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        fig_temp = crear_velocimetro(ultima_medicion['temperatura_ambiente'], "Temperatura", " °C", 0, 45, 18, 28)
-        st.plotly_chart(fig_temp, use_container_width=True)
-    with col2:
-        fig_hum = crear_velocimetro(ultima_medicion['humedad_ambiente'], "Humedad", " %", 0, 100, 50, 70)
-        st.plotly_chart(fig_hum, use_container_width=True)
+    with st.container(border=True):
+        st.subheader("🌱 Variables Biológicas Críticas")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            fig_temp = crear_velocimetro(ultima_medicion['temperatura_ambiente'], "Temperatura", " °C", 0, 45, 18, 28)
+            st.plotly_chart(fig_temp, use_container_width=True)
+        with col2:
+            fig_hum = crear_velocimetro(ultima_medicion['humedad_ambiente'], "Humedad", " %", 0, 100, 50, 70)
+            st.plotly_chart(fig_hum, use_container_width=True)
 
-    col3, col4 = st.columns(2)
-    with col3:
-        fig_vpd = crear_velocimetro(ultima_medicion['vpd'], "VPD", " kPa", 0, 3, 0.6, 1.2)
-        st.plotly_chart(fig_vpd, use_container_width=True)
-    with col4:
-        fig_suelo = crear_velocimetro(ultima_medicion['humedad_suelo1'], "Humedad Suelo", " %", 0, 100, 40, 80)
-        st.plotly_chart(fig_suelo, use_container_width=True)
+        col3, col4 = st.columns(2)
+        with col3:
+            fig_vpd = crear_velocimetro(ultima_medicion['vpd'], "VPD", " kPa", 0, 3, 0.6, 1.2)
+            st.plotly_chart(fig_vpd, use_container_width=True)
+        with col4:
+            fig_suelo = crear_velocimetro(ultima_medicion['humedad_suelo1'], "Humedad Suelo", " %", 0, 100, 40, 80)
+            st.plotly_chart(fig_suelo, use_container_width=True)
 
-    st.divider()
-
-    st.subheader("Parámetros Físicos y de Referencia")
-    col_ref1, col_ref2, col_ref3 = st.columns(3)
-    try:
-        col_ref1.metric("Intensidad Lumínica", f"{ultima_medicion['luxes1']:.1f} lx")
-        col_ref2.metric("Presión Barométrica", f"{ultima_medicion['presion_ambiente']:.1f} hPa")
-        col_ref3.metric("Altitud Relativa", f"{ultima_medicion['altitud']:.1f} msnm")
-    except KeyError as e:
-        st.warning(f"Asegúrate de que la columna {e} exista en tu Google Sheet.")
-
-    st.divider()
+    with st.container(border=True):
+        st.subheader("📊 Parámetros Físicos y de Referencia")
+        col_ref1, col_ref2, col_ref3 = st.columns(3)
+        try:
+            with col_ref1:
+                st.metric("Intensidad Lumínica", f"{ultima_medicion['luxes1']:.1f} lx")
+            with col_ref2:
+                st.metric("Presión Barométrica", f"{ultima_medicion['presion_ambiente']:.1f} hPa")
+            with col_ref3:
+                st.metric("Altitud Relativa", f"{ultima_medicion['altitud']:.1f} msnm")
+        except KeyError as e:
+            st.warning(f"Asegúrate de que la columna {e} exista en tu Google Sheet.")
     
     # =========================================================
     # 4. TENDENCIAS HISTÓRICAS (USANDO DF_FILTRADO)
     # =========================================================
-    #--------------- parametros de monitoreo
-    st.subheader("Historial de Variables Biológicas Críticas")
-    col_graf1, col_graf2 = st.columns(2)
-    with col_graf1:
-        st.write("Evolución de la Temperatura Ambiente (°C)")
-        st.line_chart(df_filtrado['temperatura_ambiente'])
-    with col_graf2:
-        st.write("Evolución de la Humedad Ambiente (%)")
-        st.line_chart(df_filtrado['humedad_ambiente'])
+    with st.container(border=True):
+        #--------------- parametros de monitoreo
+        st.subheader("📈 Historial de Variables Biológicas Críticas")
+        col_graf1, col_graf2 = st.columns(2)
+        with col_graf1:
+            st.write("Evolución de la Temperatura Ambiente (°C)")
+            st.line_chart(df_filtrado['temperatura_ambiente'])
+        with col_graf2:
+            st.write("Evolución de la Humedad Ambiente (%)")
+            st.line_chart(df_filtrado['humedad_ambiente'])
 
-    col_graf3, col_graf4 = st.columns(2)
-    with col_graf3:
-        st.write("Evolución del VPD (kPa)")
-        st.line_chart(df_filtrado['vpd'])
-    with col_graf4:
-        st.write("Evolución de la Humedad del Suelo (%)")
-        st.line_chart(df_filtrado['humedad_suelo1'])
+        col_graf3, col_graf4 = st.columns(2)
+        with col_graf3:
+            st.write("Evolución del VPD (kPa)")
+            st.line_chart(df_filtrado['vpd'])
+        with col_graf4:
+            st.write("Evolución de la Humedad del Suelo (%)")
+            st.line_chart(df_filtrado['humedad_suelo1'])
 
-    #--------------- parametros de referencia
-    st.divider()
-    st.subheader("Historial de Parámetros Físicos y de Referencia")
-    col_ref_graf1, col_ref_graf2 = st.columns(2)
-    with col_ref_graf1:
-        st.write("Intensidad Lumínica (luxes)")
-        st.line_chart(df_filtrado['luxes1'])
-    with col_ref_graf2:
-        st.write("Presión Barométrica (hPa)")
-        st.line_chart(df_filtrado['presion_ambiente'])
+    with st.container(border=True):
+        #--------------- parametros de referencia
+        st.subheader("📉 Historial de Parámetros Físicos y de Referencia")
+        col_ref_graf1, col_ref_graf2 = st.columns(2)
+        with col_ref_graf1:
+            st.write("Intensidad Lumínica (luxes)")
+            st.line_chart(df_filtrado['luxes1'])
+        with col_ref_graf2:
+            st.write("Presión Barométrica (hPa)")
+            st.line_chart(df_filtrado['presion_ambiente'])
 
-    col_ref_graf3, col_ref_graf4 = st.columns(2)
-    with col_ref_graf3:
-        st.write("Altitud Relativa (msnm)")
-        st.line_chart(df_filtrado['altitud'])
-    with col_ref_graf4:
-        st.write("Temperatura Interna del Sensor BMP (°C)")
-        st.line_chart(df_filtrado['temperatura_bmp'])
+        col_ref_graf3, col_ref_graf4 = st.columns(2)
+        with col_ref_graf3:
+            st.write("Altitud Relativa (msnm)")
+            st.line_chart(df_filtrado['altitud'])
+        with col_ref_graf4:
+            st.write("Temperatura Interna del Sensor BMP (°C)")
+            st.line_chart(df_filtrado['temperatura_bmp'])
 
 
     # =========================================================
     # 5. TABLA Y BOTÓN DE EXTRACCIÓN DE DATOS
     # =========================================================
-    st.divider()
-    with st.expander("Ver y Descargar Registro de Datos (Tabla)"):
-        st.dataframe(df_filtrado)
-        
-        # Lógica para generar el archivo CSV descargable
-        csv = df_filtrado.to_csv().encode('utf-8')
-        st.download_button(
-            label="Descargar datos filtrados como CSV",
-            data=csv,
-            file_name='datos_invernadero_orquideas.csv',
-            mime='text/csv',
-            type='primary'
-        )
+    with st.container(border=True):
+        with st.expander("Ver y Descargar Registro de Datos (Tabla)"):
+            st.dataframe(df_filtrado)
+            
+            # Lógica para generar el archivo CSV descargable
+            csv = df_filtrado.to_csv().encode('utf-8')
+            st.download_button(
+                label="Descargar datos filtrados como CSV",
+                data=csv,
+                file_name='datos_invernadero_orquideas.csv',
+                mime='text/csv',
+                type='primary'
+            )
 
 # --- FIN DEL BLOQUE 'IF NOT DF.EMPTY' ---
 else:
