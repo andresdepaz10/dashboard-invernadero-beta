@@ -28,18 +28,30 @@ df = cargar_datos()
 #------------------------------------------------------------- VISUALIZACION FECHA Y HORA
 if not df.empty:
     ultima_medicion = df.iloc[-1]
-    
+    if len(df) > 1:
+        medicion_previa = df.iloc[-2]
+    else:
+        medicion_previa = ultima_medicion # Por si solo hay 1 dato
+        
     df['fecha_hora'] = df['fecha'] + ' ' + df['hora']
     df['fecha_hora'] = pd.to_datetime(df['fecha_hora'], format='%d/%m/%Y %H:%M:%S', dayfirst=True)
     df = df.set_index('fecha_hora')
 #------------------------------------------------------------- CREACION DE VELOCIMETROS
-    def crear_velocimetro(valor, titulo, sufijo, rango_min, rango_max, opt_min, opt_max):
+    def crear_velocimetro(valor, valor_previo, titulo, sufijo, rango_min, rango_max, opt_min, opt_max):
         fig = go.Figure(go.Indicator(
-            mode = "gauge+number",
+            mode = "gauge+number+delta", # <--- Agregamos +delta aquí
             value = valor,
             domain = {'x': [0, 1], 'y': [0, 1]},
             title = {'text': titulo, 'font': {'size': 18, 'color': "white"}},
             number = {'suffix': sufijo, 'font': {'size': 32, 'color': "white", 'family': "Arial"}},
+            
+            # NUEVO: Bloque de configuración del delta
+            delta = {
+                'reference': valor_previo,
+                'position': "bottom", # Lo colocamos debajo del número gigante
+                'valueformat': ".1f", # Un decimal
+                'font': {'size': 16}
+            },
             gauge = {
                 'axis': {
                     'range': [rango_min, rango_max], 
@@ -64,7 +76,7 @@ if not df.empty:
                     'value': valor
                 }
             }
-        ))  
+        ))
         fig.update_layout(
             margin=dict(l=20, r=20, t=50, b=20), 
             height=280, 
@@ -159,18 +171,18 @@ if not df.empty:
         
         col1, col2 = st.columns(2)
         with col1:
-            fig_temp = crear_velocimetro(ultima_medicion['temperatura_ambiente'], "Temperatura", " °C", 0, 45, 18, 28)
+            fig_temp = crear_velocimetro(ultima_medicion['temperatura_ambiente'], medicion_previa['temperatura_ambiente'], "Temperatura", " °C", 0, 45, 18, 28)
             st.plotly_chart(fig_temp, use_container_width=True)
         with col2:
-            fig_hum = crear_velocimetro(ultima_medicion['humedad_ambiente'], "Humedad", " %", 0, 100, 50, 70)
+            fig_hum = crear_velocimetro(ultima_medicion['humedad_ambiente'], medicion_previa['humedad_ambiente'], "Humedad", " %", 0, 100, 50, 70)
             st.plotly_chart(fig_hum, use_container_width=True)
 
         col3, col4 = st.columns(2)
         with col3:
-            fig_vpd = crear_velocimetro(ultima_medicion['vpd'], "VPD", " kPa", 0, 3, 0.6, 1.2)
+            fig_vpd = crear_velocimetro(ultima_medicion['vpd'], medicion_previa['vpd'], "VPD", " kPa", 0, 3, 0.6, 1.2)
             st.plotly_chart(fig_vpd, use_container_width=True)
         with col4:
-            fig_suelo = crear_velocimetro(ultima_medicion['humedad_suelo1'], "Humedad Suelo", " %", 0, 100, 40, 80)
+            fig_suelo = crear_velocimetro(ultima_medicion['humedad_suelo1'], medicion_previa['humedad_suelo1'], "Humedad Suelo", " %", 0, 100, 40, 80)
             st.plotly_chart(fig_suelo, use_container_width=True)
 
     with st.container(border=True):
