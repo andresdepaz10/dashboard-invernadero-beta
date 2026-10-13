@@ -5,12 +5,12 @@ import urllib.request
 import io
 import plotly.graph_objects as go
 import datetime
-
+import json
+#------------------------------------------------------------- CONEXION GOOGLE SHEET
 st.set_page_config(page_title="Monitoreo Invernadero", layout="wide")
 st.title("Invernadero inteligente - Panel de monitoreo")
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1E-Md23GAPTStTRUPnVyDADuJuMf7v3AcwKfDUCnLats/export?format=csv"
-
-#-------------------------------------------------------------
+#------------------------------------------------------------- FUNCION CARGAR DATOS
 @st.cache_data(ttl=10) 
 def cargar_datos():
     try:
@@ -25,16 +25,14 @@ def cargar_datos():
         st.error(f"Error al cargar los datos: {e}")
         return pd.DataFrame()      
 df = cargar_datos()
-#-------------------------------------------------------------
-
+#------------------------------------------------------------- VISUALIZACION FECHA Y HORA
 if not df.empty:
     ultima_medicion = df.iloc[-1]
     
     df['fecha_hora'] = df['fecha'] + ' ' + df['hora']
     df['fecha_hora'] = pd.to_datetime(df['fecha_hora'], format='%d/%m/%Y %H:%M:%S', dayfirst=True)
     df = df.set_index('fecha_hora')
-
-    # --- crear velocimetros
+#------------------------------------------------------------- CREACION DE VELOCIMETROS
     def crear_velocimetro(valor, titulo, sufijo, rango_min, rango_max, opt_min, opt_max):
         fig = go.Figure(go.Indicator(
             mode = "gauge+number",
@@ -66,8 +64,7 @@ if not df.empty:
                     'value': valor
                 }
             }
-        ))
-        
+        ))  
         fig.update_layout(
             margin=dict(l=20, r=20, t=50, b=20), 
             height=280, 
@@ -76,7 +73,7 @@ if not df.empty:
         )
         return fig
     
-    # --- crear graficas estaticas
+#------------------------------------------------------------- CREACION GRAFICAS ESTATICAS
     def crear_grafica_estatica(fechas, valores, color_linea):
         fig = go.Figure(go.Scatter(
             x=fechas, 
@@ -188,6 +185,51 @@ if not df.empty:
                 st.metric("Altitud Relativa", f"{ultima_medicion['altitud']:.1f} msnm")
         except KeyError as e:
             st.warning(f"Asegúrate de que la columna {e} exista en tu Google Sheet.")
+            
+            
+    # =========================================================
+    # NUEVA SECCIÓN: UBICACIÓN Y CONTRASTE EXTERIOR
+    # =========================================================
+    with st.container(border=True):
+        st.subheader("🌍 Ubicación y Clima Exterior")
+        
+        LATITUD = 16.758311
+        LONGITUD = -93.172347
+        
+        col_mapa, col_clima = st.columns([1.5, 1])
+        
+        with col_mapa:
+            df_ubicacion = pd.DataFrame({'lat': [LATITUD], 'lon': [LONGITUD]})
+            st.map(df_ubicacion, zoom=13, use_container_width=True)
+            
+        with col_clima:
+            st.write("Datos Meteorológicos (Open-Meteo)")
+            try:
+                # Consultamos la API gratuita de Open-Meteo
+                url_clima = f"https://api.open-meteo.com/v1/forecast?latitude={LATITUD}&longitude={LONGITUD}&current=temperature_2m,relative_humidity_2m"
+                req_clima = urllib.request.Request(url_clima, headers={'User-Agent': 'Mozilla/5.0'})
+                import ssl
+                contexto_ssl = ssl._create_unverified_context()
+                
+                with urllib.request.urlopen(req_clima, context=contexto_ssl) as response:
+                    datos_clima = json.loads(response.read().decode('utf-8'))
+                    
+                temp_ext = datos_clima['current']['temperature_2m']
+                hum_ext = datos_clima['current']['relative_humidity_2m']
+                
+                # Calculamos el aislamiento térmico (Interior vs Exterior)
+                dif_temp = temp_actual - temp_ext
+                dif_hum = hum_actual - hum_ext
+                
+                # El parámetro 'delta' dibuja flechas verdes/rojas automáticamente
+                st.metric(label="Temperatura Exterior", value=f"{temp_ext} °C", 
+                          delta=f"{dif_temp:.1f} °C (Diferencia interior)", delta_color="inverse")
+                
+                st.metric(label="Humedad Exterior", value=f"{hum_ext} %", 
+                          delta=f"{dif_hum:.1f} % (Diferencia interior)")
+                
+            except Exception as e:
+                st.warning("Conectando con el satélite meteorológico...")
     
     # =========================================================
     # 4. TENDENCIAS HISTÓRICAS (GRÁFICAS ESTÁTICAS)
@@ -252,17 +294,14 @@ if not df.empty:
                 data=csv,
                 file_name='datos_invernadero_orquideas.csv',
                 mime='text/csv',
-                type='primary'
+                type='secondary'
             )
-
-# --- FIN DEL BLOQUE 'IF NOT DF.EMPTY' ---
 else:
     st.info("Esperando datos del Google Sheet...")
 
 # --- MODO DE MONITOREO EN VIVO (Auto-Refresh) ---
 st.sidebar.divider()
 auto_refresh = st.sidebar.checkbox("🔄 Activar Monitoreo en Vivo (10s)")
-
 if auto_refresh:
     time.sleep(10)
     st.cache_data.clear()
