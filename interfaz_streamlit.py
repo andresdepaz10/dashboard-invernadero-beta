@@ -266,4 +266,4 @@ auto_refresh = st.sidebar.checkbox("🔄 Activar Monitoreo en Vivo (10s)")
 if auto_refresh:
     time.sleep(10)
     st.cache_data.clear()
-    st.rerun(
+    st.rerun()
