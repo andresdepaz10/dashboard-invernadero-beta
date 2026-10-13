@@ -6,10 +6,12 @@ import io
 import plotly.graph_objects as go
 import datetime
 import json
+
 #------------------------------------------------------------- CONEXION GOOGLE SHEET
 st.set_page_config(page_title="Monitoreo Invernadero", layout="wide")
 st.title("Invernadero inteligente - Panel de monitoreo")
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1E-Md23GAPTStTRUPnVyDADuJuMf7v3AcwKfDUCnLats/export?format=csv"
+
 #------------------------------------------------------------- FUNCION CARGAR DATOS
 @st.cache_data(ttl=10) 
 def cargar_datos():
@@ -25,6 +27,7 @@ def cargar_datos():
         st.error(f"Error al cargar los datos: {e}")
         return pd.DataFrame()      
 df = cargar_datos()
+
 #------------------------------------------------------------- VISUALIZACION FECHA Y HORA
 if not df.empty:
     ultima_medicion = df.iloc[-1]
@@ -36,20 +39,20 @@ if not df.empty:
     df['fecha_hora'] = df['fecha'] + ' ' + df['hora']
     df['fecha_hora'] = pd.to_datetime(df['fecha_hora'], format='%d/%m/%Y %H:%M:%S', dayfirst=True)
     df = df.set_index('fecha_hora')
+
 #------------------------------------------------------------- CREACION DE VELOCIMETROS
     def crear_velocimetro(valor, valor_previo, titulo, sufijo, rango_min, rango_max, opt_min, opt_max):
         fig = go.Figure(go.Indicator(
-            mode = "gauge+number+delta", # <--- Agregamos +delta aquí
+            mode = "gauge+number+delta",
             value = valor,
             domain = {'x': [0, 1], 'y': [0, 1]},
             title = {'text': titulo, 'font': {'size': 18, 'color': "white"}},
             number = {'suffix': sufijo, 'font': {'size': 32, 'color': "white", 'family': "Arial"}},
             
-            # NUEVO: Bloque de configuración del delta
             delta = {
                 'reference': valor_previo,
-                'position': "bottom", # Lo colocamos debajo del número gigante
-                'valueformat': ".1f", # Un decimal
+                'position': "bottom",
+                'valueformat': ".1f",
                 'font': {'size': 16}
             },
             gauge = {
@@ -137,7 +140,7 @@ if not df.empty:
 
 
     # =========================================================
-    # 2. BARRA LATERAL (SIDEBAR) - FILTRO OPTIMIZADO
+    # 2. BARRA LATERAL (SIDEBAR) - FILTRO OPTIMIZADO Y CONTROL
     # =========================================================
     st.sidebar.header("Filtros de historial")
     st.sidebar.write("Ajusta el rango de fechas. (Por defecto: últimos 3 días).")
@@ -162,6 +165,28 @@ if not df.empty:
         df_filtrado = df.loc[mask]
     else:
         df_filtrado = df
+
+    # =========================================================
+    # NUEVO: CONTROL BIDIRECCIONAL DE ACTUADORES
+    # =========================================================
+    st.sidebar.divider()
+    st.sidebar.subheader("🎛️ Control de Actuadores")
+
+    estado_led = st.sidebar.toggle("💡 Estado del LED / Actuador")
+
+    if st.sidebar.button("Aplicar Cambio"):
+        comando = "LED_ON" if estado_led else "LED_OFF"
+        script_id = "AKfycbyUjFPT-FgeMGwf-IsJKb8z0tPYiO276FmsW5tywCmZBtrA7Q6zLC43ivGeDGEhhjEY"
+        url_control = f"https://script.google.com/macros/s/{script_id}/exec?comando={comando}"
+        
+        try:
+            req = urllib.request.Request(url_control, headers={'User-Agent': 'Mozilla/5.0'})
+            import ssl
+            contexto = ssl._create_unverified_context()
+            with urllib.request.urlopen(req, context=contexto) as response:
+                st.sidebar.success(f"Comando '{comando}' enviado al servidor.")
+        except Exception as e:
+            st.sidebar.error(f"Error al enviar el comando: {e}")
 
     # =========================================================
     # 3. ESTADO ACTUAL (Velocímetros y Tarjetas)
@@ -217,7 +242,6 @@ if not df.empty:
         with col_clima:
             st.write("Datos Meteorológicos (Open-Meteo)")
             try:
-                # Consultamos la API gratuita de Open-Meteo
                 url_clima = f"https://api.open-meteo.com/v1/forecast?latitude={LATITUD}&longitude={LONGITUD}&current=temperature_2m,relative_humidity_2m"
                 req_clima = urllib.request.Request(url_clima, headers={'User-Agent': 'Mozilla/5.0'})
                 import ssl
@@ -229,11 +253,9 @@ if not df.empty:
                 temp_ext = datos_clima['current']['temperature_2m']
                 hum_ext = datos_clima['current']['relative_humidity_2m']
                 
-                # Calculamos el aislamiento térmico (Interior vs Exterior)
                 dif_temp = temp_actual - temp_ext
                 dif_hum = hum_actual - hum_ext
                 
-                # El parámetro 'delta' dibuja flechas verdes/rojas automáticamente
                 st.metric(label="Temperatura Exterior", value=f"{temp_ext} °C", 
                           delta=f"{dif_temp:.1f} °C (Diferencia interior)", delta_color="inverse")
                 
@@ -315,11 +337,9 @@ else:
 st.sidebar.divider()
 auto_refresh = st.sidebar.checkbox("🔄 Activar Monitoreo en Vivo (10s)")
 if auto_refresh:
-    # Genera la hora exacta de la interfaz
     hora_actual = datetime.datetime.now().strftime("%H:%M:%S")
     st.sidebar.caption(f"Última consulta al servidor: {hora_actual}")
     
-    # Agrega un pequeño indicador circular de espera
     with st.spinner('Esperando nuevo ciclo de telemetría...'):
         time.sleep(10)
         st.cache_data.clear()
