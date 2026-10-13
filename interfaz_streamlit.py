@@ -39,24 +39,41 @@ if not df.empty:
         fig = go.Figure(go.Indicator(
             mode = "gauge+number",
             value = valor,
-            title = {'text': titulo, 'font': {'size': 18}},
-            number = {'suffix': sufijo, 'font': {'size': 24}},
+            domain = {'x': [0, 1], 'y': [0, 1]},
+            title = {'text': titulo, 'font': {'size': 18, 'color': "white"}},
+            number = {'suffix': sufijo, 'font': {'size': 32, 'color': "white", 'family': "Arial"}},
             gauge = {
-                'axis': {'range': [rango_min, rango_max], 'tickwidth': 1, 'tickcolor': "darkblue"},
-                'bar': {'color': "rgba(0,0,0,0)"},
+                'axis': {
+                    'range': [rango_min, rango_max], 
+                    'tickwidth': 2, 
+                    'tickcolor': "white",
+                    'ticklen': 8,
+                    'dtick': (rango_max - rango_min) / 5, 
+                    'tickfont': {'color': "white"}
+                },
+                'bar': {'color': "rgba(0,0,0,0)"}, 
+                'bgcolor': "rgba(255, 255, 255, 0.1)", 
+                'borderwidth': 1,
+                'bordercolor': "gray",
                 'steps': [
-                    {'range': [rango_min, opt_min], 'color': "rgba(255, 99, 71, 0.6)"},  
-                    {'range': [opt_min, opt_max], 'color': "rgba(144, 238, 144, 0.6)"}, 
-                    {'range': [opt_max, rango_max], 'color': "rgba(255, 99, 71, 0.6)"}   
+                    {'range': [rango_min, opt_min], 'color': "rgba(255, 76, 76, 0.8)", 'thickness': 0.3},
+                    {'range': [opt_min, opt_max], 'color': "rgba(102, 255, 102, 0.8)", 'thickness': 0.3},
+                    {'range': [opt_max, rango_max], 'color': "rgba(255, 76, 76, 0.8)", 'thickness': 0.3}
                 ],
                 'threshold': {
-                    'line': {'color': "white", 'width': 6},
-                    'thickness': 0.8,
+                    'line': {'color': "white", 'width': 5}, 
+                    'thickness': 0.75, 
                     'value': valor
                 }
             }
         ))
-        fig.update_layout(margin=dict(l=15, r=15, t=40, b=15), height=200, paper_bgcolor="rgba(0,0,0,0)")
+        
+        fig.update_layout(
+            margin=dict(l=20, r=20, t=50, b=20), 
+            height=280, 
+            paper_bgcolor="rgba(0,0,0,0)",
+            font={'color': "white"}
+        )
         return fig
     
     # --- crear graficas estaticas
@@ -69,9 +86,9 @@ if not df.empty:
         ))
         fig.update_layout(
             margin=dict(l=10, r=10, t=10, b=10),
-            xaxis=dict(fixedrange=True), # 🔒 Bloquea el paneo/zoom horizontal
-            yaxis=dict(fixedrange=True), # 🔒 Bloquea el paneo/zoom vertical
-            hovermode="x unified",       # Muestra el dato al pasar el ratón sin moverse
+            xaxis=dict(fixedrange=True), 
+            yaxis=dict(fixedrange=True), 
+            hovermode="x unified",       
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)"
         )
@@ -178,27 +195,26 @@ if not df.empty:
     with st.container(border=True):
         st.subheader("📈 Historial de Variables Biológicas Críticas")
         
-        # El parámetro config={'displayModeBar': False} oculta el menú flotante de Plotly
         config_estatica = {'displayModeBar': False}
         
         col_graf1, col_graf2 = st.columns(2)
         with col_graf1:
             st.write("Evolución de la Temperatura Ambiente (°C)")
-            fig1 = crear_grafica_estatica(df_filtrado.index, df_filtrado['temperatura_ambiente'], "#FF7F0E") # Naranja
+            fig1 = crear_grafica_estatica(df_filtrado.index, df_filtrado['temperatura_ambiente'], "#FF7F0E") 
             st.plotly_chart(fig1, use_container_width=True, config=config_estatica)
         with col_graf2:
             st.write("Evolución de la Humedad Ambiente (%)")
-            fig2 = crear_grafica_estatica(df_filtrado.index, df_filtrado['humedad_ambiente'], "#1F77B4") # Azul
+            fig2 = crear_grafica_estatica(df_filtrado.index, df_filtrado['humedad_ambiente'], "#1F77B4") 
             st.plotly_chart(fig2, use_container_width=True, config=config_estatica)
 
         col_graf3, col_graf4 = st.columns(2)
         with col_graf3:
             st.write("Evolución del VPD (kPa)")
-            fig3 = crear_grafica_estatica(df_filtrado.index, df_filtrado['vpd'], "#9467BD") # Morado
+            fig3 = crear_grafica_estatica(df_filtrado.index, df_filtrado['vpd'], "#9467BD") 
             st.plotly_chart(fig3, use_container_width=True, config=config_estatica)
         with col_graf4:
             st.write("Evolución de la Humedad del Suelo (%)")
-            fig4 = crear_grafica_estatica(df_filtrado.index, df_filtrado['humedad_suelo1'], "#8C564B") # Café
+            fig4 = crear_grafica_estatica(df_filtrado.index, df_filtrado['humedad_suelo1'], "#8C564B") 
             st.plotly_chart(fig4, use_container_width=True, config=config_estatica)
 
     with st.container(border=True):
@@ -206,21 +222,21 @@ if not df.empty:
         col_ref_graf1, col_ref_graf2 = st.columns(2)
         with col_ref_graf1:
             st.write("Intensidad Lumínica (luxes)")
-            fig5 = crear_grafica_estatica(df_filtrado.index, df_filtrado['luxes1'], "#E377C2") # Rosa
+            fig5 = crear_grafica_estatica(df_filtrado.index, df_filtrado['luxes1'], "#E377C2") 
             st.plotly_chart(fig5, use_container_width=True, config=config_estatica)
         with col_ref_graf2:
             st.write("Presión Barométrica (hPa)")
-            fig6 = crear_grafica_estatica(df_filtrado.index, df_filtrado['presion_ambiente'], "#7F7F7F") # Gris
+            fig6 = crear_grafica_estatica(df_filtrado.index, df_filtrado['presion_ambiente'], "#7F7F7F") 
             st.plotly_chart(fig6, use_container_width=True, config=config_estatica)
 
         col_ref_graf3, col_ref_graf4 = st.columns(2)
         with col_ref_graf3:
             st.write("Altitud Relativa (msnm)")
-            fig7 = crear_grafica_estatica(df_filtrado.index, df_filtrado['altitud'], "#BCBD22") # Verde olivo
+            fig7 = crear_grafica_estatica(df_filtrado.index, df_filtrado['altitud'], "#BCBD22") 
             st.plotly_chart(fig7, use_container_width=True, config=config_estatica)
         with col_ref_graf4:
             st.write("Temperatura Interna del Sensor BMP (°C)")
-            fig8 = crear_grafica_estatica(df_filtrado.index, df_filtrado['temperatura_bmp'], "#17BECF") # Cian
+            fig8 = crear_grafica_estatica(df_filtrado.index, df_filtrado['temperatura_bmp'], "#17BECF") 
             st.plotly_chart(fig8, use_container_width=True, config=config_estatica)
 
     # =========================================================
@@ -250,4 +266,4 @@ auto_refresh = st.sidebar.checkbox("🔄 Activar Monitoreo en Vivo (10s)")
 if auto_refresh:
     time.sleep(10)
     st.cache_data.clear()
-    st.rerun()
+    st.rerun(
